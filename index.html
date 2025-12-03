@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#f0f0f0">
+
+<!-- iOS:lle pitää olla erikseen apple-touch-icon -->
+<link rel="apple-touch-icon" sizes="192x192" href="./lammas.png">
+
+<title>Laske lampaita</title>
+
+<style>
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+body{
+    font-family:Arial,sans-serif;
+    background:#f0f0f0;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding-top:calc(env(safe-area-inset-top) + 10px);
+}
+
+/* ------------------ TITLE ------------------ */
+
+h1{
+    font-size:clamp(22px,6vw,30px);
+    margin-bottom:6px;
+}
+
+#puzzleTitle{
+    font-size:clamp(18px,5vw,22px);
+    margin-bottom:8px;
+}
+
+/* ------------------ MAIN ROW ------------------ */
+
+#mainRow{
+    display:flex;
+    flex-direction:row;
+    justify-content:center;
+    align-items:flex-start;
+    width:100%;
+    max-width:430px;
+}
+
+/* vasen sarake: lauta + preview */
+
+#leftColumn{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:8px;
+}
+
+/* ------------------ BOARD ------------------ */
+
+#boardWrapper{
+
+    position:relative;
+    width:75vw;
+    max-width:330px;
+    aspect-ratio:1;
+    background:#333;
+    border-radius:8px;
+    padding:4px;
+}
+
+#gameBoard{
+    width:100%;
+    height:100%;
+    display:grid;
+    grid-template-columns:repeat(5,1fr);
+    grid-template-rows:repeat(5,1fr);
+    gap:2px;
+}
+
+.cell{
+    background:#8BC34A;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    font-size:clamp(20px,7vw,34px);
+    position:relative;
+}
+
+.cell.water{
+    background:#42A5F5;
+}
+
+/* tummennus kaikille laudalla oleville paloille */
+
+.cell.occupied::before{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:rgba(0,0,0,0.10);
+    pointer-events:none;
+}
+
+/* ------------------ CORNER LABELS ------------------ */
+
+.corner-label{
+    position:absolute;
+    font-size:clamp(18px,4vw,24px);
+    font-weight:900;
+    color:black;
+    z-index:10;
+}
+
+.corner-label.tl{ top:-30px; left:0; }
+.corner-label.tr{ top:-30px; right:0; text-align:right; }
+.corner-label.bl{ bottom:-25px; left:0; }
+.corner-label.br{ bottom:-25px; right:0; text-align:right; }
+
+/* ------------------ MINI MENU ------------------ */
+
+#miniMenu{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    margin-left:8px;
+}
+
+.mini-btn{
+    width:54px;
+    height:54px;
+    background:white;
+    border:2px solid #bbb;
+    border-radius:6px;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    position:relative;
+}
+
+.mini-btn.selected{
+    border-color:#4CAF50;
+    background:#e8f5e9;
+}
+
+.mini-btn.locked{
+    opacity:0.45;
+    background:#ddd;
+}
+
+.mini-btn.locked::after{
+    content:"🔒";
+    position:absolute;
+    bottom:2px;
+    right:2px;
+    font-size:16px;
+}
+
+.mini-btn.inuse{
+    opacity:0.6;
+}
+
+.mini-btn.inuse::after{
+    content:"✓";
+    position:absolute;
+    bottom:2px;
+    right:2px;
+    font-size:16px;
+    color:#4CAF50;
+}
+
+.mini-grid{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    grid-template-rows:repeat(3,1fr);
+    width:85%;
+    height:85%;
+    gap:1px;
+}
+
+.mini-cell{
+    background:white;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    position:relative;
+    font-size:13px;
+}
+
+/* ------------------ PREVIEW ------------------ */
+
+#preview{
+    width:190px;
+    max-width:70vw;
+    aspect-ratio:1;
+    background:white;
+    border-radius:6px;
+    border:1px solid #888;
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    grid-template-rows:repeat(3,1fr);
+    gap:2px;
+    margin-top:10px;
+}
+
+.preview-cell{
+    background:white;
+    border:1px solid #aaa;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    position:relative;
+    font-size:26px;
+}
+
+/* ------------------ DUAL DOTS (mini + preview) ------------------ */
+
+.two-dots{
+    position:relative;
+    width:100%;
+    height:100%;
+}
+
+/* ylempi piste */
+.dot1{
+    position:absolute;
+    top:0%;
+    left:15%;
+    font-size:1em;
+}
+
+/* alempi piste */
+.dot2{
+    position:absolute;
+    top:45%;
+    left:55%;
+    font-size:1em;
+}
+
+.mini-cell .two-dots{
+    width:100%;
+    height:100%;
+}
+
+.mini-cell .dot1{
+    top:-30%;
+    left:0%;
+}
+
+.mini-cell .dot2{
+    top:10%;
+    left:40%;
+}
+
+/* ------------------ BUTTONS ------------------ */
+
+#buttons{
+    width:100%;
+    max-width:420px;
+    display:flex;
+    justify-content:space-between;
+    margin-top:10px;
+}
+
+#buttons button{
+    width:40%;
+    padding:12px;
+    font-size:18px;
+    border-radius:6px;
+    border:none;
+}
+
+#difficultySelect{
+    width:40%;
+    padding:12px;
+    font-size:18px;
+    border-radius:6px;
+	margin-left:20px;
+}
+
+#newBtn{
+    background:#4CAF50;
+    color:white;
+    margin-right:20px;
+}
+
+/* ------------------ STATUS ------------------ */
+
+#status{
+    width:100%;
+    max-width:420px;
+    margin-top:10px;
+    background:white;
+    border-radius:6px;
+    padding:10px;
+    font-size:18px;
+    text-align:center;
+    min-height:38px;
+}
+
+.flash {
+    animation: flashAnim 0.3s ease-in-out;
+}
+
+@keyframes flashAnim {
+    0%   { filter: brightness(1); }
+    50%  { filter: brightness(1.9); }
+    100% { filter: brightness(1); }
+}
+
+</style>
+</head>
+
+<body>
+
+<h1 id="title">LASKE LAMPAITA</h1>
+<div id="puzzleTitle">Pulma #</div>
+
+<div id="mainRow">
+
+    <div id="leftColumn">
+        <div id="boardWrapper">
+            <div class="corner-label tl" id="tl"></div>
+            <div class="corner-label tr" id="tr"></div>
+            <div class="corner-label bl" id="bl"></div>
+            <div class="corner-label br" id="br"></div>
+
+            <div id="gameBoard"></div>
+        </div>
+
+        <!-- preview heti 5×5 ruudukon alla -->
+        <div id="preview"></div>
+    </div>
+
+    <!-- minivalikko laudan + previewin vieressä -->
+    <div id="miniMenu"></div>
+
+</div>
+
+<div id="buttons">
+<select id="difficultySelect">
+    <option value="easy">Helppo</option>
+    <option value="normal">Normaali</option>
+    <option value="hard">Hankala</option>
+    <option value="expert">Vaikea</option>
+</select>
+    <button id="newBtn">Uusi pulma</button>
+</div>
+
+<div id="status"></div>
+
+<script>
+/* --------------------------------------------------
+   DATA
+-------------------------------------------------- */
+
+const BOARD_LAYOUT=[
+ ['g','g','b','g','g'],
+ ['g','g','b','g','g'],
+ ['b','b','b','g','g'],
+ ['g','g','b','b','b'],
+ ['g','g','b','g','g']
+];
+
+// 0=harmaa pala, 1=eläin, 2=tuplaeläin (lammas), -1=koppi
+const PIECES={
+    1:[[1,1,0],[null,null,0]],
+    2:[[2,0],[null,0],[null,0]],
+    3:[[0],[1],[2]],
+    4:[[1,1]],
+    5:[[null,0,1],[0,0,null]],
+    6:[[null,0],[2,0]],
+    7:[[null,1],[0,0],[null,0]],
+    8:[[-1]]
+};
+
+let PUZZLES=[];
+let PUZZLE=null;
+let lastPuzzleIndex=-1;
+let currentDifficulty = "easy";  // oletus: helppo
+
+
+let game={
+    board:Array(25).fill(null),
+    selected:null,
+    rotation:0,
+    placed:new Set(),   // laudalla olevat id:t
+    locked:new Set()    // esiasetetut, ei poistettavat
+};
+
+/* --------------------------------------------------
+   INIT
+-------------------------------------------------- */
+
+async function loadPuzzles(){
+    if(!PUZZLES.length){
+        const res=await fetch("counting_sheep_puzzles.json");
+        PUZZLES=await res.json();
+    }
+
+let rangeStart = 0;
+let rangeEnd   = PUZZLES.length - 1;
+
+// vaikeusalueet
+if(currentDifficulty === "easy"){
+    rangeStart = 0;
+    rangeEnd = Math.min(11, PUZZLES.length - 1);
+}
+else if(currentDifficulty === "normal"){
+    rangeStart = 12;
+    rangeEnd = Math.min(23, PUZZLES.length - 1);
+}
+else if(currentDifficulty === "hard"){
+    rangeStart = 24;
+    rangeEnd = Math.min(35, PUZZLES.length - 1);
+}
+else if(currentDifficulty === "expert"){
+    rangeStart = 36;
+    rangeEnd = PUZZLES.length - 1;
+}
+
+let idx;
+if(rangeStart === rangeEnd){
+    idx = rangeStart;
+}else{
+    do{
+        idx = rangeStart + Math.floor(Math.random()*(rangeEnd-rangeStart+1));
+    }while(idx === lastPuzzleIndex);
+}
+
+    lastPuzzleIndex=idx;
+    PUZZLE=PUZZLES[idx];
+
+    startPuzzle();
+}
+
+function startPuzzle(){
+    game.board=Array(25).fill(null);
+    game.selected=null;
+    game.rotation=0;
+    game.placed=new Set();
+    game.locked=new Set();
+
+    // otsikko
+    const titleEl=document.getElementById("puzzleTitle");
+    if(PUZZLE.name){
+        titleEl.textContent=PUZZLE.name;
+    }else{
+        titleEl.textContent="Pulma #"+(lastPuzzleIndex+1);
+    }
+
+    // kulmat (B -> vuohi)
+    document.getElementById("tl").textContent=decorateTarget(PUZZLE.targets.tl);
+    document.getElementById("tr").textContent=decorateTarget(PUZZLE.targets.tr);
+    document.getElementById("bl").textContent=decorateTarget(PUZZLE.targets.bl);
+    document.getElementById("br").textContent=decorateTarget(PUZZLE.targets.br);
+
+    // esiasetetut palat
+    PUZZLE.prefilled.forEach(p=>{
+        if(p.locked) game.locked.add(p.piece);
+        const rot=rotateN(PIECES[p.piece],p.rotation);
+        placePiece(rot,p.row,p.col,p.piece,true);
+        game.placed.add(p.piece);
+    });
+
+    renderBoard();
+    renderMenu();
+    renderPreview(null);
+    setStatus("Aloita valitsemalla pala valikosta.");
+}
+
+
+document.getElementById("difficultySelect").onchange = (e)=>{
+    currentDifficulty = e.target.value;
+    // Vaihdetaan uuteen pulmaan heti vaikeustason vaihtuessa
+    loadPuzzles();
+};
+
+document.getElementById("newBtn").onclick=loadPuzzles;
+
+
+
+function decorateTarget(str){
+    if(!str) return "";
+    return String(str).replace(/B/g,"🐐");
+}
+
+/* --------------------------------------------------
+   BOARD RENDER
+-------------------------------------------------- */
+
+function renderBoard(){
+    const g=document.getElementById("gameBoard");
+    g.innerHTML="";
+
+    for(let i=0;i<25;i++){
+        const r=Math.floor(i/5);
+        const c=i%5;
+
+        const cell=document.createElement("div");
+        cell.className="cell";
+
+        if(BOARD_LAYOUT[r][c]==='b') cell.classList.add("water");
+
+        const item=game.board[i];
+
+        if(item){
+            const id=item.id;
+            const v=item.value;
+
+            // eläin / koppi
+            if(v===-1){
+                cell.textContent="🏠";
+            }else if(v===0){
+                cell.textContent="";
+            }else if(v===1){
+                if(id===5){
+                    cell.textContent="🐐";
+                }else{
+                    cell.textContent="🐑";
+                }
+            }else if(v===2){
+                if(id===5){
+                    // vuohi: aina vain yksi
+                    cell.textContent="🐐";
+                }else{
+                    cell.textContent="🐑🐑";
+                    cell.style.fontSize="0.9em"; // jotta ei venytä riviä
+                }
+            }
+
+            // tummennus kaikille paloille
+            cell.classList.add("occupied");
+
+            // ulkoreunat
+            const B="2px solid white";
+            cell.style.borderTop   = same(id,r-1,c) ? "none":B;
+            cell.style.borderBottom= same(id,r+1,c) ? "none":B;
+            cell.style.borderLeft  = same(id,r,c-1) ? "none":B;
+            cell.style.borderRight = same(id,r,c+1) ? "none":B;
+        }
+
+        cell.onclick=()=>boardClick(r,c);
+        cell.ondblclick=()=>boardRemove(r,c);
+
+        g.appendChild(cell);
+    }
+	    // WIN CHECK (vain lisätty — ei muuta renderBoardia)
+if (checkWin()) {
+    playWinAnimation();
+}
+
+}
+
+
+
+function same(id,r,c){
+    if(r<0||r>4||c<0||c>4) return false;
+    const i=r*5+c;
+    return game.board[i] && game.board[i].id===id;
+}
+
+/* --------------------------------------------------
+   MINI MENU
+-------------------------------------------------- */
+
+function renderMenu(){
+    const menu=document.getElementById("miniMenu");
+    menu.innerHTML="";
+
+    for(let id=1;id<=8;id++){
+        const btn=document.createElement("div");
+        btn.className="mini-btn";
+
+        const locked=game.locked.has(id);
+        const used=game.placed.has(id);
+
+        if(locked) btn.classList.add("locked");
+        else if(used) btn.classList.add("inuse");
+
+        if(game.selected===id) btn.classList.add("selected");
+
+        if(!locked){
+            btn.onclick=()=>{
+                game.selected=id;
+                game.rotation=0;
+                renderMenu();
+                renderPreview(id);
+            };
+        }
+
+        const grid=document.createElement("div");
+        grid.className="mini-grid";
+
+        const p=PIECES[id];
+        const b=bounds(p);
+        const offR=Math.floor((3-(b.r2-b.r1+1))/2)-b.r1;
+        const offC=Math.floor((3-(b.c2-b.c1+1))/2)-b.c1;
+
+        for(let r=0;r<3;r++){
+            for(let c=0;c<3;c++){
+                const cell=document.createElement("div");
+                cell.className="mini-cell";
+
+                const pr=r-offR, pc=c-offC;
+
+                if(!(pr>=0&&pr<p.length&&pc>=0&&pc<p[0].length)){
+                    grid.appendChild(cell);
+                    continue;
+                }
+
+                const v=p[pr][pc];
+
+                if(v===null){
+                    grid.appendChild(cell);
+                    continue;
+                }
+
+                if(v===-1){
+                    cell.style.background="#8B4513";
+                }else if(v===0){
+                    cell.style.background="#ccc";
+                }else if(v===1){
+                    cell.style.background="#ccc";
+                    cell.innerHTML = (id===5)
+                        ? "<span style='color:red;'>●</span>"
+                        : "●";
+                }else if(v===2){
+                    cell.style.background="#ccc";
+                    if(id===5){
+                        // vuohi ei koskaan tuplana → yksi punainen piste
+                        cell.innerHTML="<span style='color:red;'>●</span>";
+                    }else{
+                        cell.innerHTML=dotHTML(false);
+                    }
+                }
+
+                grid.appendChild(cell);
+            }
+        }
+
+        btn.appendChild(grid);
+        menu.appendChild(btn);
+    }
+}
+
+/* --------------------------------------------------
+   PREVIEW
+-------------------------------------------------- */
+
+function renderPreview(id){
+    const prev=document.getElementById("preview");
+    prev.innerHTML="";
+
+    if(!id) return;
+
+    const p=rotateN(PIECES[id],game.rotation);
+    const b=bounds(p);
+    const offR=Math.floor((3-(b.r2-b.r1+1))/2)-b.r1;
+    const offC=Math.floor((3-(b.c2-b.c1+1))/2)-b.c1;
+
+    for(let r=0;r<3;r++){
+        for(let c=0;c<3;c++){
+            const cell=document.createElement("div");
+            cell.className="preview-cell";
+
+            const pr=r-offR, pc=c-offC;
+            if(!(pr>=0&&pr<p.length&&pc>=0&&pc<p[0].length)){
+                prev.appendChild(cell);
+                continue;
+            }
+
+            const v=p[pr][pc];
+
+            if(v===null){
+                prev.appendChild(cell);
+                continue;
+            }
+
+            if(v===-1){
+                cell.style.background="#8B4513";
+            }else if(v===0){
+                cell.style.background="#ccc";
+            }else if(v===1){
+                cell.style.background="#ccc";
+                cell.innerHTML = (id===5)
+                    ? "<span style='color:red;'>●</span>"
+                    : "●";
+            }else if(v===2){
+                cell.style.background="#ccc";
+                if(id===5){
+                    // vuohi ei koskaan tuplana
+                    cell.innerHTML="<span style='color:red;'>●</span>";
+                }else{
+                    cell.innerHTML=dotHTML(false);
+                }
+            }
+
+            prev.appendChild(cell);
+        }
+    }
+
+    prev.onclick=()=>{
+        game.rotation=(game.rotation+1)%4;
+        renderPreview(id);
+    };
+}
+
+/* --------------------------------------------------
+   DOTS (yhteinen mini + preview)
+-------------------------------------------------- */
+
+function dotHTML(isRed){
+    const color=isRed?"red":"black";
+    return `
+      <div class="two-dots">
+        <span class="dot1" style="color:${color}">●</span>
+        <span class="dot2" style="color:${color}">●</span>
+      </div>`;
+}
+
+/* --------------------------------------------------
+   BOARD ACTIONS
+-------------------------------------------------- */
+
+function boardClick(r,c){
+    const idx=r*5+c;
+    const item=game.board[idx];
+
+    // klikataan olemassa olevaa palaa → valitaan
+    if(item){
+        if(game.locked.has(item.id)) return;
+        game.selected=item.id;
+        game.rotation=0;
+        renderMenu();
+        renderPreview(item.id);
+        return;
+    }
+
+    if(!game.selected) return;
+
+    const id=game.selected;
+
+    // kutakin palaa vain yksi kappale laudalla
+    if(game.placed.has(id)){
+        setStatus("Tämä pala on jo laudalla!");
+        return;
+    }
+
+    const rot=rotateN(PIECES[id],game.rotation);
+
+    for(let pr=0;pr<rot.length;pr++){
+        for(let pc=0;pc<rot[0].length;pc++){
+            if(rot[pr][pc]!==null){
+                const rr=r-pr, cc=c-pc;
+                if(canPlace(rot,rr,cc)){
+                    placePiece(rot,rr,cc,id,false);
+                    game.placed.add(id);
+                    renderBoard();
+                    renderMenu();
+                    setStatus("Pala asetettu.");
+if (checkWin()) {
+    playWinAnimation();
+}
+
+
+                    return;
+                }
+            }
+        }
+    }
+
+    setStatus("Ei sovi tähän kohtaan.");
+}
+
+function boardRemove(r,c){
+    const idx=r*5+c;
+    const item=game.board[idx];
+    if(!item) return;
+
+    const id=item.id;
+    if(game.locked.has(id)) return;
+
+    for(let i=0;i<25;i++){
+        if(game.board[i] && game.board[i].id===id){
+            game.board[i]=null;
+        }
+    }
+
+    game.placed.delete(id);
+    renderBoard();
+    renderMenu();
+    renderPreview(null);
+if (checkWin()) {
+    playWinAnimation();
+}
+
+}
+
+/* --------------------------------------------------
+   UTILS
+-------------------------------------------------- */
+
+function rotateOnce(p){
+    const R=p.length,C=p[0].length;
+    const out=Array(C).fill(null).map(()=>Array(R).fill(null));
+    for(let r=0;r<R;r++)
+        for(let c=0;c<C;c++)
+            out[c][R-1-r]=p[r][c];
+    return out;
+}
+
+function rotateN(p,t){
+    let x=JSON.parse(JSON.stringify(p));
+    for(let i=0;i<t;i++) x=rotateOnce(x);
+    return x;
+}
+
+function bounds(p){
+    let r1=99,r2=-1,c1=99,c2=-1;
+    for(let r=0;r<p.length;r++)
+        for(let c=0;c<p[r].length;c++)
+            if(p[r][c]!==null){
+                r1=Math.min(r1,r);
+                r2=Math.max(r2,r);
+                c1=Math.min(c1,c);
+                c2=Math.max(c2,c);
+            }
+    return {r1,r2,c1,c2};
+}
+
+function canPlace(p,rr,cc){
+    for(let r=0;r<p.length;r++){
+        for(let c=0;c<p[0].length;c++){
+            if(p[r][c]===null) continue;
+            const y=rr+r, x=cc+c;
+            if(y<0||y>4||x<0||x>4) return false;
+
+            if(BOARD_LAYOUT[y][x]==='b' && p[r][c]>0) return false;
+            if(game.board[y*5+x]) return false;
+        }
+    }
+    return true;
+}
+
+function placePiece(p,rr,cc,id,isLocked){
+    for(let r=0;r<p.length;r++){
+        for(let c=0;c<p[0].length;c++){
+            if(p[r][c]===null) continue;
+            const y=rr+r, x=cc+c;
+            game.board[y*5+x]={id:id,value:p[r][c]};
+        }
+    }
+}
+
+function setStatus(msg){
+    document.getElementById("status").textContent=msg;
+}
+
+loadPuzzles();
+
+/* --------------------------------------------------
+   WIN CHECK  —  PC-VERSION LOGIC
+-------------------------------------------------- */
+
+function countSheepByArea(){
+    const out = { tl:0, tr:0, bl:0, br:0 };
+
+    for(let i=0;i<25;i++){
+        const item = game.board[i];
+        if(!item || item.value <= 0) continue;  // lasketaan vain 1 ja 2
+
+        const row = Math.floor(i/5);
+        const col = i % 5;
+
+        // PC-version kulma-algoritmi
+        const area = (row < 2.5 ? 't' : 'b') +
+                     (col < 2.5 ? 'l' : 'r');
+
+        out[area] += item.value;
+    }
+
+    return out;
+}
+
+async function playWinAnimation() {
+    const ids = [...game.placed];   // kaikki laudalla olevat palat (1–8)
+    for(let i=0;i<2;i++){
+    for (const id of ids) {
+        // väläytä KAIKKI id:n ruudut
+        for (let i = 0; i < 25; i++) {
+            if (game.board[i] && game.board[i].id === id) {
+                const cell = document.querySelectorAll(".cell")[i];
+                cell.classList.add("flash");
+                // poista efekti, jotta se voi toistua
+                setTimeout(() => cell.classList.remove("flash"), 300);
+            }
+        }
+        await new Promise(res => setTimeout(res, 120)); // pieni väli ennen seuraavaa palaa
+    }
+}
+    // animaation jälkeen näytetään viesti
+    setStatus("Pulma ratkaistu! 🎉");
+}
+
+
+function checkWin(){
+    const have = countSheepByArea();
+
+    const tl = PUZZLE.targets.tl;
+    const tr = PUZZLE.targets.tr;
+    const bl = PUZZLE.targets.bl;
+    const br = PUZZLE.targets.br;
+
+    const wantTL = tl==="?" ? null : parseInt(tl);
+    const wantTR = tr==="?" ? null : parseInt(tr);
+    const wantBL = bl==="?" ? null : parseInt(bl);
+    const wantBR = br==="?" ? null : parseInt(br);
+
+    if(wantTL !== null && have.tl !== wantTL) return false;
+    if(wantTR !== null && have.tr !== wantTR) return false;
+    if(wantBL !== null && have.bl !== wantBL) return false;
+    if(wantBR !== null && have.br !== wantBR) return false;
+
+    return true;
+}
+
+/* SERVICE WORKER */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker
+      .register('./service-worker.js')
+      .catch(err => console.warn('Service workerin rekisteröinti epäonnistui:', err));
+  });
+}
+
+</script>
+<!-- QR Koodi yms… -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+
+<style>
+  #qrOverlay{
+    position:fixed;inset:0;display:none;align-items:center;justify-content:center;
+    background:rgba(0,0,0,.6);z-index:999;
+  }
+  #qrBox{
+    background:#fff;padding:16px 20px;border-radius:12px;text-align:center;
+    box-shadow:0 0 20px rgba(0,0,0,.4);
+  }
+  #qrBox canvas{width:180px;height:180px;}
+</style>
+
+<div id="qrOverlay">
+  <div id="qrBox">
+    <canvas id="qr"></canvas>
+    <p>ymouse91.github.io/sheeps/</p>
+  </div>
+</div>
+
+<script>
+const qr=new QRious({
+  element:document.getElementById('qr'),
+  value:'https://ymouse91.github.io/sheeps/',
+  size:180
+});
+const overlay=document.getElementById('qrOverlay');
+document.getElementById('title').onclick=()=>overlay.style.display='flex';
+overlay.onclick=()=>overlay.style.display='none';
+</script>
+</body>
+</html>
