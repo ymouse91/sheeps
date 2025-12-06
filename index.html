@@ -870,22 +870,25 @@ loadPuzzles();
 function countSheepByArea(){
     const out = { tl:0, tr:0, bl:0, br:0 };
 
+    // Täsmälliset ruutujoukot (PC-version mukaan)
+    const TL = [0,1,5,6];
+    const TR = [3,4,8,9,13,14];
+    const BL = [15,16,20,21];
+    const BR = [23,24];
+
     for(let i=0;i<25;i++){
         const item = game.board[i];
-        if(!item || item.value <= 0) continue;  // lasketaan vain 1 ja 2
+        if(!item || item.value <= 0) continue; // Lasketaan vain arvot 1 ja 2
 
-        const row = Math.floor(i/5);
-        const col = i % 5;
-
-        // PC-version kulma-algoritmi
-        const area = (row < 2.5 ? 't' : 'b') +
-                     (col < 2.5 ? 'l' : 'r');
-
-        out[area] += item.value;
+        if (TL.includes(i))  out.tl += item.value;
+        if (TR.includes(i))  out.tr += item.value;
+        if (BL.includes(i))  out.bl += item.value;
+        if (BR.includes(i))  out.br += item.value;
     }
 
     return out;
 }
+
 
 async function playWinAnimation() {
     const ids = [...game.placed];   // kaikki laudalla olevat palat (1–8)
@@ -921,13 +924,24 @@ function checkWin(){
     const wantBL = bl==="?" ? null : parseInt(bl);
     const wantBR = br==="?" ? null : parseInt(br);
 
-    if(wantTL !== null && have.tl !== wantTL) return false;
-    if(wantTR !== null && have.tr !== wantTR) return false;
-    if(wantBL !== null && have.bl !== wantBL) return false;
-    if(wantBR !== null && have.br !== wantBR) return false;
+    let ok = true;
+
+    if(wantTL !== null && have.tl !== wantTL) ok = false;
+    if(wantTR !== null && have.tr !== wantTR) ok = false;
+    if(wantBL !== null && have.bl !== wantBL) ok = false;
+    if(wantBR !== null && have.br !== wantBR) ok = false;
+
+    if (!ok) {
+        // Kaikki 8 palaa laudalla, mutta kulmat eivät täsmää → näytetään virhe
+        if (game.placed.size === 8) {
+            setStatus("Ratkaisu ei ole oikein!");
+        }
+        return false;
+    }
 
     return true;
 }
+
 
 /* SERVICE WORKER */
 if ('serviceWorker' in navigator) {
