@@ -584,14 +584,22 @@ function renderMenu(){
 
         if(game.selected===id) btn.classList.add("selected");
 
-        if(!locked){
-            btn.onclick=()=>{
-                game.selected=id;
-                game.rotation=0;
-                renderMenu();
-                renderPreview(id);
-            };
+if (!locked) {
+    btn.onclick = () => {
+        if (game.selected === id) {
+            // Sama pala jo valittuna → käännä
+            game.rotation = (game.rotation + 1) % 4;
+        } else {
+            // Uusi pala valitaan → nollaa rotaatio
+            game.selected = id;
+            game.rotation = 0;
         }
+
+        renderMenu();
+        renderPreview(game.selected);
+    };
+}
+
 
         const grid=document.createElement("div");
         grid.className="mini-grid";
@@ -792,14 +800,22 @@ function boardRemove(r,c){
     }
 
     game.placed.delete(id);
+
+    // 🔥 Palauta palan rotaatio alkuasentoon, jos tämä pala oli valittuna
+    if (game.selected === id) {
+        game.rotation = 0;
+        game.selected = null;    // selkeyttää käyttöä, ei pakollinen mutta suositeltava
+    }
+
     renderBoard();
     renderMenu();
     renderPreview(null);
-if (checkWin()) {
-    playWinAnimation();
+
+    if (checkWin()) {
+        playWinAnimation();
+    }
 }
 
-}
 
 /* --------------------------------------------------
    UTILS
