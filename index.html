@@ -206,11 +206,6 @@ h1{
     font-size:13px;
 }
 
-/* ------------------ PREVIEW ------------------ */
-
-#preview{
-    display:none; /* poistettu näkyvistä (JS käyttää edelleen) */
-}
 
 /* ------------------ DUAL DOTS (mini + preview) ------------------ */
 
@@ -330,8 +325,7 @@ h1{
         <!-- minivalikko (2 vaakariviä) -->
         <div id="miniMenu"></div>
 
-        <!-- preview poistettu näkyvistä (JS käyttää edelleen) -->
-        <div id="preview"></div>
+
     </div>
 </div>
 
@@ -463,7 +457,7 @@ function startPuzzle(){
 
     renderBoard();
     renderMenu();
-    renderPreview(null);
+
     setStatus("Aloita valitsemalla pala valikosta.");
 }
 
@@ -590,7 +584,7 @@ if (!locked) {
         }
 
         renderMenu();
-        renderPreview(game.selected);
+
     };
 }
 
@@ -650,67 +644,6 @@ if (!locked) {
     }
 }
 
-/* --------------------------------------------------
-   PREVIEW
--------------------------------------------------- */
-
-function renderPreview(id){
-    const prev=document.getElementById("preview");
-    prev.innerHTML="";
-
-    if(!id) return;
-
-    const p=rotateN(PIECES[id],game.rotation);
-    const b=bounds(p);
-    const offR=Math.floor((3-(b.r2-b.r1+1))/2)-b.r1;
-    const offC=Math.floor((3-(b.c2-b.c1+1))/2)-b.c1;
-
-    for(let r=0;r<3;r++){
-        for(let c=0;c<3;c++){
-            const cell=document.createElement("div");
-            cell.className="preview-cell";
-
-            const pr=r-offR, pc=c-offC;
-            if(!(pr>=0&&pr<p.length&&pc>=0&&pc<p[0].length)){
-                prev.appendChild(cell);
-                continue;
-            }
-
-            const v=p[pr][pc];
-
-            if(v===null){
-                prev.appendChild(cell);
-                continue;
-            }
-
-            if(v===-1){
-                cell.style.background="#8B4513";
-            }else if(v===0){
-                cell.style.background="#ccc";
-            }else if(v===1){
-                cell.style.background="#ccc";
-                cell.innerHTML = (id===5)
-                    ? "<span style='color:red;'>●</span>"
-                    : "●";
-            }else if(v===2){
-                cell.style.background="#ccc";
-                if(id===5){
-                    // vuohi ei koskaan tuplana
-                    cell.innerHTML="<span style='color:red;'>●</span>";
-                }else{
-                    cell.innerHTML=dotHTML(false);
-                }
-            }
-
-            prev.appendChild(cell);
-        }
-    }
-
-    prev.onclick=()=>{
-        game.rotation=(game.rotation+1)%4;
-        renderPreview(id);
-    };
-}
 
 /* --------------------------------------------------
    DOTS (yhteinen mini + preview)
@@ -739,7 +672,7 @@ function boardClick(r,c){
         game.selected=item.id;
         game.rotation=0;
         renderMenu();
-        renderPreview(item.id);
+
         return;
     }
 
@@ -803,7 +736,7 @@ function boardRemove(r,c){
 
     renderBoard();
     renderMenu();
-    renderPreview(null);
+
 
     if (checkWin()) {
         playWinAnimation();
