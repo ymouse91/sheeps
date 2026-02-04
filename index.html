@@ -7,6 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#f0f0f0">
+<link rel="manifest" href="manifest.json">
 
 <!-- iOS:lle pitää olla erikseen apple-touch-icon -->
 <link rel="apple-touch-icon" sizes="192x192" href="./lammas.png">
@@ -45,9 +46,9 @@ h1{
 
 #mainRow{
     display:flex;
-    flex-direction:row;
-    justify-content:center;
-    align-items:flex-start;
+    flex-direction:column;
+    justify-content:flex-start;
+    align-items:center;
     width:100%;
     max-width:430px;
 }
@@ -59,6 +60,7 @@ h1{
     flex-direction:column;
     align-items:center;
     gap:8px;
+    width:100%;
 }
 
 /* ------------------ BOARD ------------------ */
@@ -125,14 +127,23 @@ h1{
 
 #miniMenu{
     display:flex;
-    flex-direction:column;
+    flex-wrap:wrap;
     gap:6px;
-    margin-left:8px;
+    width:75vw;
+    max-width:330px;
+    justify-content:center;
+    align-content:center;
+    margin:0;
+    padding:0;
+    margin-top: 44px; /* pudotettu alas jotta BL/BR-labelit eivät peity */
 }
 
 .mini-btn{
-    width:54px;
-    height:54px;
+    flex:0 0 calc((100% - 18px)/4); /* 4 per row, 3 gaps */
+    aspect-ratio:1;
+    max-width:72px;
+    width:auto;
+    height:auto;
     background:white;
     border:2px solid #bbb;
     border-radius:6px;
@@ -177,9 +188,13 @@ h1{
     display:grid;
     grid-template-columns:repeat(3,1fr);
     grid-template-rows:repeat(3,1fr);
-    width:85%;
-    height:85%;
+    width:84%;
+    height:84%;
     gap:1px;
+	    background:
+      linear-gradient(rgba(0,0,0,0.25) 2px, transparent 2px),
+      linear-gradient(90deg, rgba(0,0,0,0.25) 2px, transparent 2px);
+    background-size: 33.33% 33.33%;
 }
 
 .mini-cell{
@@ -194,27 +209,7 @@ h1{
 /* ------------------ PREVIEW ------------------ */
 
 #preview{
-    width:190px;
-    max-width:70vw;
-    aspect-ratio:1;
-    background:white;
-    border-radius:6px;
-    border:1px solid #888;
-    display:grid;
-    grid-template-columns:repeat(3,1fr);
-    grid-template-rows:repeat(3,1fr);
-    gap:2px;
-    margin-top:10px;
-}
-
-.preview-cell{
-    background:white;
-    border:1px solid #aaa;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    position:relative;
-    font-size:26px;
+    display:none; /* poistettu näkyvistä (JS käyttää edelleen) */
 }
 
 /* ------------------ DUAL DOTS (mini + preview) ------------------ */
@@ -332,13 +327,12 @@ h1{
             <div id="gameBoard"></div>
         </div>
 
-        <!-- preview heti 5×5 ruudukon alla -->
+        <!-- minivalikko (2 vaakariviä) -->
+        <div id="miniMenu"></div>
+
+        <!-- preview poistettu näkyvistä (JS käyttää edelleen) -->
         <div id="preview"></div>
     </div>
-
-    <!-- minivalikko laudan + previewin vieressä -->
-    <div id="miniMenu"></div>
-
 </div>
 
 <div id="buttons">
@@ -604,7 +598,7 @@ if (!locked) {
         const grid=document.createElement("div");
         grid.className="mini-grid";
 
-        const p=PIECES[id];
+        const p = (game.selected===id) ? rotateN(PIECES[id], game.rotation) : PIECES[id];
         const b=bounds(p);
         const offR=Math.floor((3-(b.r2-b.r1+1))/2)-b.r1;
         const offC=Math.floor((3-(b.c2-b.c1+1))/2)-b.c1;
